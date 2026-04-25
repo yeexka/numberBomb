@@ -122,16 +122,20 @@
       try {
         const currentRound = await getCurrentRound();
 
-        const { error } = await db.from("guesses").insert([{
-          round_id: currentRound,
-          name,
-          number
-        }]);
+        const { data, error } = await db
+  .from("guesses")
+  .insert([{
+    round_id: currentRound,
+    name,
+    number
+  }])
+  .select()
+  .single();
 
-        if (error) throw error;
+if (error) throw error;
+if (!data || !data.id) throw new Error("数据库没有返回提交记录");
 
-        msg.textContent = "提交成功！请看大屏。";
-        document.getElementById("number").value = "";
+msg.textContent = `提交成功！编号：${data.id}，请看大屏。`;
       } catch (err) {
         console.error(err);
         msg.textContent = "提交失败，请检查网络或告诉老师。";
