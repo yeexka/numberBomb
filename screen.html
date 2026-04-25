@@ -214,7 +214,14 @@
       let guesses = [];
       let channel = null;
 
-      const guessUrl = "https://numberbomb.zh-cn.edgeone.cool/guess.html";
+      // const guessUrl = "https://numberbomb.zh-cn.edgeone.cool/guess.html";
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get("eo_token");
+      const time = params.get("eo_time");
+      let guessUrl = `${location.origin}/guess.html`;
+      if (token && time) {
+        guessUrl += `?eo_token=${token}&eo_time=${time}`;
+        }
       document.getElementById("guessUrl").textContent = guessUrl;
       document.getElementById("qr").src =
         "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" +
