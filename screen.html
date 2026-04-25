@@ -257,19 +257,34 @@
       }
 
       async function loadGame() {
-        const { data, error } = await db
-          .from("game_config")
-          .select("*")
-          .eq("id", 1)
-          .single();
-        if (error) {
-          result.textContent = "读取游戏配置失败，请检查 Supabase 表和权限。";
-          console.error(error);
+        const { error: deleteError } = await db
+          .from("guesses")
+          .delete()
+          .gte("id", 0);
+
+        if (deleteError) {
+          result.textContent = "清空旧提交失败，请检查 Supabase 权限。";
+          console.error(deleteError);
           return;
         }
-        currentRound = data.current_round;
+
+        const { error: resetError } = await db
+          .from("game_config")
+          .update({ current_round: 1 })
+          .eq("id", 1);
+
+        if (resetError) {
+          result.textContent = "重置轮数失败，请检查 Supabase 权限。";
+          console.error(resetError);
+          return;
+        }
+
+        currentRound = 1;
         roundText.textContent = currentRound;
-        await loadGuesses();
+
+        guesses = [];
+        renderGuesses();
+        updateCount();
         subscribeGuesses();
         startRolling();
       }
