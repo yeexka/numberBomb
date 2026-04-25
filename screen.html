@@ -186,7 +186,11 @@
       </section>
 
       <section class="panel">
-        <div class="round">第 <span id="roundText">1</span> 轮提交记录</div>
+        <div class="round">
+          第 <span id="roundText">1</span> 轮提交记录（已提交：<span id="count"
+            >0</span
+          >人）
+        </div>
         <ul id="guessList" class="guess-list"></ul>
       </section>
     </aside>
@@ -215,7 +219,9 @@
       document.getElementById("qr").src =
         "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" +
         encodeURIComponent(guessUrl);
-
+      function updateCount() {
+        document.getElementById("count").innerText = guesses.length;
+      }
       function startRolling() {
         clearInterval(timer);
         numberBox.classList.add("rolling");
@@ -281,6 +287,7 @@
         }
         guesses = data || [];
         renderGuesses();
+        updateCount();
       }
 
       function subscribeGuesses() {
@@ -299,6 +306,7 @@
               if (payload.new.round_id === currentRound) {
                 guesses.push(payload.new);
                 renderGuesses();
+                updateCount();
               }
             },
           )
@@ -346,6 +354,7 @@
         roundText.textContent = currentRound;
         guesses = [];
         renderGuesses();
+        updateCount();
         subscribeGuesses();
         startRolling();
       });
