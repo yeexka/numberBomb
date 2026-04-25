@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>数字炸弹</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei",
+          sans-serif;
+        background: radial-gradient(circle at top, #243b55, #141e30 70%);
+        color: white;
+        display: grid;
+        grid-template-columns: 1.5fr 1fr;
+        gap: 28px;
+        padding: 32px;
+      }
+      .panel {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 28px;
+        padding: 28px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
+        backdrop-filter: blur(12px);
+      }
+      .main {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      h1 {
+        margin: 0;
+        font-size: 54px;
+        letter-spacing: 2px;
+      }
+      .subtitle {
+        margin-top: 10px;
+        font-size: 22px;
+        opacity: 0.8;
+      }
+      .number-box {
+        margin: 32px auto;
+        width: min(520px, 90%);
+        aspect-ratio: 1.4 / 1;
+        border-radius: 36px;
+        background: linear-gradient(
+          145deg,
+          rgba(255, 255, 255, 0.95),
+          rgba(255, 255, 255, 0.76)
+        );
+        color: #111827;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 150px;
+        font-weight: 900;
+        box-shadow:
+          0 28px 80px rgba(0, 0, 0, 0.35),
+          inset 0 -8px 20px rgba(0, 0, 0, 0.12);
+        transition: transform 0.18s ease;
+      }
+      .number-box.rolling {
+        transform: scale(1.02);
+      }
+      .controls {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      button {
+        border: 0;
+        border-radius: 999px;
+        padding: 18px 30px;
+        font-size: 22px;
+        font-weight: 800;
+        cursor: pointer;
+        color: #111827;
+        background: #facc15;
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25);
+      }
+      button.secondary {
+        background: #d1d5db;
+      }
+      button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+      .result {
+        margin-top: 22px;
+        min-height: 78px;
+        text-align: center;
+        font-size: 34px;
+        font-weight: 900;
+        color: #fde68a;
+      }
+      .side {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      .qr-wrap {
+        text-align: center;
+      }
+      .qr-wrap img {
+        width: 230px;
+        height: 230px;
+        background: white;
+        border-radius: 18px;
+        padding: 10px;
+      }
+      .url {
+        margin-top: 12px;
+        font-size: 14px;
+        word-break: break-all;
+        opacity: 0.75;
+      }
+      .round {
+        font-size: 22px;
+        font-weight: 800;
+        margin-bottom: 10px;
+      }
+      .guess-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        max-height: 48vh;
+        overflow: auto;
+      }
+      .guess-list li {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 14px;
+        margin-bottom: 10px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.12);
+        font-size: 19px;
+      }
+      .hint {
+        font-size: 15px;
+        opacity: 0.74;
+        line-height: 1.6;
+      }
+      .danger {
+        background: rgba(248, 113, 113, 0.18) !important;
+        border: 1px solid rgba(248, 113, 113, 0.45);
+      }
+    </style>
+  </head>
+  <body>
+    <section class="panel main">
+      <div>
+        <h1>💣 数字炸弹</h1>
+        <div class="subtitle">
+          扫码提交昵称和数字，主持人点击停止，停在哪个数字，猜中者中弹并获得惩罚卡一张。
+        </div>
+
+        <div id="numberBox" class="number-box rolling">1</div>
+
+        <div class="controls">
+          <button id="stopBtn">停止！</button>
+          <button id="newRoundBtn" class="secondary">开始新一轮</button>
+        </div>
+
+        <div id="result" class="result">等待提交数字……</div>
+      </div>
+
+      <div class="hint">
+        赞助商™️ Chanceux <br />
+        作者版权©️Yee ๑
+      </div>
+    </section>
+
+    <aside class="side">
+      <section class="panel qr-wrap">
+        <div class="round">📱 扫码参与</div>
+        <img id="qr" alt="学生扫码二维码" />
+        <div id="guessUrl" class="url"></div>
+      </section>
+
+      <section class="panel">
+        <div class="round">第 <span id="roundText">1</span> 轮提交记录</div>
+        <ul id="guessList" class="guess-list"></ul>
+      </section>
+    </aside>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="./config.js"></script>
+    <script>
+      const { SUPABASE_URL, SUPABASE_KEY } = window.APP_CONFIG;
+      const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+      const numberBox = document.getElementById("numberBox");
+      const stopBtn = document.getElementById("stopBtn");
+      const newRoundBtn = document.getElementById("newRoundBtn");
+      const result = document.getElementById("result");
+      const guessList = document.getElementById("guessList");
+      const roundText = document.getElementById("roundText");
+
+      let currentRound = 1;
+      let currentNumber = 1;
+      let timer = null;
+      let guesses = [];
+      let channel = null;
+
+      const guessUrl = `${location.origin}/guess.html`;
+      document.getElementById("guessUrl").textContent = guessUrl;
+      document.getElementById("qr").src =
+        "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" +
+        encodeURIComponent(guessUrl);
+
+      function startRolling() {
+        clearInterval(timer);
+        numberBox.classList.add("rolling");
+        timer = setInterval(() => {
+          currentNumber = Math.floor(Math.random() * 100) + 1;
+          numberBox.textContent = currentNumber;
+        }, 70);
+        stopBtn.disabled = false;
+        result.textContent = "等待提交数字……";
+      }
+
+      function renderGuesses() {
+        guessList.innerHTML = "";
+        guesses.forEach((g) => {
+          const li = document.createElement("li");
+          li.innerHTML = `<span>${escapeHtml(g.name || "匿名")}</span><strong>${g.number}</strong>`;
+          guessList.appendChild(li);
+        });
+      }
+
+      function escapeHtml(str) {
+        return String(str).replace(
+          /[&<>"']/g,
+          (s) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#039;",
+            })[s],
+        );
+      }
+
+      async function loadGame() {
+        const { data, error } = await db
+          .from("game_config")
+          .select("*")
+          .eq("id", 1)
+          .single();
+        if (error) {
+          result.textContent = "读取游戏配置失败，请检查 Supabase 表和权限。";
+          console.error(error);
+          return;
+        }
+        currentRound = data.current_round;
+        roundText.textContent = currentRound;
+        await loadGuesses();
+        subscribeGuesses();
+        startRolling();
+      }
+
+      async function loadGuesses() {
+        const { data, error } = await db
+          .from("guesses")
+          .select("*")
+          .eq("round_id", currentRound)
+          .order("created_at", { ascending: true });
+
+        if (error) {
+          console.error(error);
+          return;
+        }
+        guesses = data || [];
+        renderGuesses();
+      }
+
+      function subscribeGuesses() {
+        if (channel) db.removeChannel(channel);
+
+        channel = db
+          .channel("guesses-round-" + currentRound)
+          .on(
+            "postgres_changes",
+            {
+              event: "INSERT",
+              schema: "public",
+              table: "guesses",
+            },
+            (payload) => {
+              if (payload.new.round_id === currentRound) {
+                guesses.push(payload.new);
+                renderGuesses();
+              }
+            },
+          )
+          .subscribe();
+      }
+
+      stopBtn.addEventListener("click", () => {
+        clearInterval(timer);
+        timer = null;
+        numberBox.classList.remove("rolling");
+        stopBtn.disabled = true;
+
+        const winners = guesses.filter(
+          (g) => Number(g.number) === Number(currentNumber),
+        );
+
+        Array.from(guessList.children).forEach((li, index) => {
+          if (Number(guesses[index].number) === Number(currentNumber)) {
+            li.classList.add("danger");
+          }
+        });
+
+        if (winners.length > 0) {
+          result.textContent =
+            "💥 中弹：" + winners.map((w) => w.name || "匿名").join("、");
+        } else {
+          result.textContent = "✅ 无人中弹，本轮安全。";
+        }
+      });
+
+      newRoundBtn.addEventListener("click", async () => {
+        const nextRound = currentRound + 1;
+        const { error } = await db
+          .from("game_config")
+          .update({ current_round: nextRound })
+          .eq("id", 1);
+
+        if (error) {
+          result.textContent = "新一轮创建失败，请检查权限。";
+          console.error(error);
+          return;
+        }
+
+        currentRound = nextRound;
+        roundText.textContent = currentRound;
+        guesses = [];
+        renderGuesses();
+        subscribeGuesses();
+        startRolling();
+      });
+
+      loadGame();
+    </script>
+  </body>
+</html>
