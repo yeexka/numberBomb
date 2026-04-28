@@ -70,20 +70,51 @@
       font-weight: 800;
       color: #fde68a;
     }
+    .hidden {
+      display: none;
+    }
+    .name-badge {
+      margin: 14px 0 4px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: rgba(250,204,21,.16);
+      border: 1px solid rgba(250,204,21,.35);
+      font-size: 17px;
+      line-height: 1.5;
+    }
+    .small-tip {
+      margin-top: 8px;
+      font-size: 14px;
+      opacity: .7;
+      line-height: 1.5;
+    }
   </style>
 </head>
 <body>
   <main class="card">
     <h1>💣 数字炸弹</h1>
-    <p>请输入你的昵称和你猜的数字。在大屏点击停止后，如果停在你猜的数字，你会获得幸运炸弹😈。</p>
 
-    <label for="name">姓名</label>
-    <input id="name" placeholder="例如：张三" autocomplete="name" />
+    <section id="nameSection">
+      <p>第一次进入请先确认你的昵称。确认后后续轮次都会使用这个昵称。</p>
 
-    <label for="number">猜一个 1-50 的数字</label>
-    <input id="number" type="number" min="1" max="100" placeholder="例如：37" />
+      <label for="name">昵称</label>
+      <input id="name" placeholder="例如：张三" autocomplete="name" />
 
-    <button id="submitBtn">提交</button>
+      <button id="lockNameBtn" type="button">确认昵称</button>
+      <div class="small-tip">确认后本设备会记住昵称。除非清除微信/浏览器缓存，否则下次扫码会直接进入猜数字。</div>
+    </section>
+
+    <section id="guessSection" class="hidden">
+      <p>请输入你猜的数字。在大屏点击停止后，如果停在你猜的数字，你会获得幸运炸弹😈。</p>
+
+      <div id="lockedNameText" class="name-badge"></div>
+
+      <label for="number">猜一个 1-50 的数字</label>
+      <input id="number" type="number" min="1" max="50" placeholder="例如：37" />
+
+      <button id="submitBtn">提交</button>
+    </section>
+
     <div id="msg" class="msg"></div>
   </main>
 
@@ -93,21 +124,69 @@
     const { SUPABASE_URL, SUPABASE_KEY } = window.APP_CONFIG;
     const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+    const nameSection = document.getElementById("nameSection");
+    const guessSection = document.getElementById("guessSection");
+    const nameInput = document.getElementById("name");
+    const lockNameBtn = document.getElementById("lockNameBtn");
+    const lockedNameText = document.getElementById("lockedNameText");
     const submitBtn = document.getElementById("submitBtn");
     const msg = document.getElementById("msg");
 
+    let lockedName = localStorage.getItem("numberBombName");
+
+    function showNameStep() {
+      nameSection.classList.remove("hidden");
+      guessSection.classList.add("hidden");
+      msg.textContent = "";
+    }
+
+    function showGuessStep() {
+      nameSection.classList.add("hidden");
+      guessSection.classList.remove("hidden");
+      lockedNameText.textContent = `当前昵称：${lockedName}`;
+      msg.textContent = "";
+    }
+
+    function initPage() {
+      if (lockedName) {
+        showGuessStep();
+      } else {
+        showNameStep();
+      }
+    }
+
+    lockNameBtn.addEventListener("click", () => {
+      const name = nameInput.value.trim();
+
+      if (!name) {
+        msg.textContent = "请先输入昵称。";
+        return;
+      }
+
+      lockedName = name;
+      localStorage.setItem("numberBombName", lockedName);
+      showGuessStep();
+      msg.textContent = "昵称已确认，后续轮次将使用这个昵称。";
+    });
+
     async function getCurrentRound() {
-      const { data, error } = await db.from("game_config").select("*").eq("id", 1).single();
+      const { data, error } = await db
+        .from("game_config")
+        .select("*")
+        .eq("id", 1)
+        .single();
+
       if (error) throw error;
       return data.current_round;
     }
 
     submitBtn.addEventListener("click", async () => {
-      const name = document.getElementById("name").value.trim();
+      const name = lockedName;
       const number = Number(document.getElementById("number").value);
 
       if (!name) {
-        msg.textContent = "请先填写姓名。";
+        msg.textContent = "请先确认昵称，再提交数字。";
+        showNameStep();
         return;
       }
 
@@ -123,19 +202,20 @@
         const currentRound = await getCurrentRound();
 
         const { data, error } = await db
-  .from("guesses")
-  .insert([{
-    round_id: currentRound,
-    name,
-    number
-  }])
-  .select()
-  .single();
+          .from("guesses")
+          .insert([{
+            round_id: currentRound,
+            name,
+            number
+          }])
+          .select()
+          .single();
 
-if (error) throw error;
-if (!data || !data.id) throw new Error("数据库没有返回提交记录");
+        if (error) throw error;
+        if (!data || !data.id) throw new Error("数据库没有返回提交记录");
 
-msg.textContent = `提交成功！编号：${data.id}，请看大屏。`;
+        msg.textContent = `提交成功！当前第 ${currentRound} 轮，请看大屏。`;
+        document.getElementById("number").value = "";
       } catch (err) {
         console.error(err);
         msg.textContent = "提交失败，请检查网络或告诉老师。";
@@ -143,6 +223,8 @@ msg.textContent = `提交成功！编号：${data.id}，请看大屏。`;
         submitBtn.disabled = false;
       }
     });
+
+    initPage();
   </script>
 </body>
 </html>
