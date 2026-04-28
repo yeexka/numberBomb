@@ -95,17 +95,16 @@
     <h1>💣 数字炸弹</h1>
 
     <section id="nameSection">
-      <p>第一次进入请先确认你的昵称。确认后后续轮次都会使用这个昵称。</p>
+      <p>请先输入你的昵称。后续轮次都会使用这个昵称哦。禁止称呼自己为他人的家长😠</p>
 
       <label for="name">昵称</label>
-      <input id="name" placeholder="例如：张三" autocomplete="name" />
+      <input id="name" placeholder="例如：冯彰美佳" autocomplete="name" />
 
       <button id="lockNameBtn" type="button">确认昵称</button>
-      <div class="small-tip">确认后本设备会记住昵称。除非清除微信/浏览器缓存，否则下次扫码会直接进入猜数字。</div>
     </section>
 
     <section id="guessSection" class="hidden">
-      <p>请输入你猜的数字。在大屏点击停止后，如果停在你猜的数字，你会获得幸运炸弹😈。</p>
+      <p>请输入你猜的数字。在大屏点击停止后，如果停在你猜的数字，你会获得幸运炸弹，嘿嘿嘿……😈</p>
 
       <div id="lockedNameText" class="name-badge"></div>
 
@@ -143,7 +142,7 @@
     function showGuessStep() {
       nameSection.classList.add("hidden");
       guessSection.classList.remove("hidden");
-      lockedNameText.textContent = `当前昵称：${lockedName}`;
+      lockedNameText.textContent = `你说你叫：${lockedName}`;
       msg.textContent = "";
     }
 
