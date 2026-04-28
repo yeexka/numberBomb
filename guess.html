@@ -161,7 +161,10 @@
         msg.textContent = "请先输入昵称。";
         return;
       }
-
+if (name.length > 10) {
+  msg.textContent = "昵称最多10个字。";
+  return;
+}
       lockedName = name;
       localStorage.setItem("numberBombName", lockedName);
       showGuessStep();
