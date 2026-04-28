@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>数字炸弹</title>
+    <title>联谊活动2:数字炸弹</title>
     <style>
       * {
         box-sizing: border-box;
@@ -240,7 +240,7 @@
         clearInterval(timer);
         numberBox.classList.add("rolling");
         timer = setInterval(() => {
-          currentNumber = Math.floor(Math.random() * 10) + 1;
+          currentNumber = Math.floor(Math.random() * 100) + 1;
           numberBox.textContent = currentNumber;
         }, 70);
         stopBtn.disabled = false;
@@ -366,7 +366,7 @@
           const submittedNumbers = new Set(guesses.map((g) => Number(g.number)));
           const safeNumbers = [];
 
-          for (let i = 1; i <= 10; i++) {
+          for (let i = 1; i <= 100; i++) {
             if (!submittedNumbers.has(i)) {
               safeNumbers.push(i);
             }
@@ -385,8 +385,7 @@
           numberBox.textContent = currentNumber;
 
           result.innerHTML =
-            `🛡️` +
-            `无人中弹。`;
+            `✅ 无人中弹，本轮安全。`;
 
           renderGuesses();
           return;
