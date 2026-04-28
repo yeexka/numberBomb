@@ -92,16 +92,18 @@
         opacity: 0.45;
         cursor: not-allowed;
       }
-     .result {
+      .result {
   margin-top: 22px;
   min-height: 78px;
   text-align: center;
+
   font-size: 28px;
   font-weight: 900;
   color: #fde68a;
 
-  max-width: 100%;
-  word-break: break-all;
+  max-height: 200px;     /* 限制高度 */
+  overflow-y: auto;      /* 超出滚动 */
+
   line-height: 1.4;
 }
       .side {
@@ -163,7 +165,7 @@
       <div>
         <h1>💣 数字炸弹</h1>
         <div class="subtitle">
-          扫码提交昵称和数字，主持人点击停止，停在哪个数字，猜中者中弹并获得惩罚卡一张。
+          扫码提交昵称和数字，主持人点击停止。第二轮固定为轮空轮，其余轮次会从已提交数字中抽取炸弹。
         </div>
 
         <div id="numberBox" class="number-box rolling">1</div>
@@ -217,6 +219,7 @@
       let timer = null;
       let guesses = [];
       let channel = null;
+      let winningNumber = null;
 
       // const guessUrl = "https://numberbomb.zh-cn.edgeone.cool/guess.html";
       const params = new URLSearchParams(window.location.search);
@@ -241,14 +244,27 @@
           numberBox.textContent = currentNumber;
         }, 70);
         stopBtn.disabled = false;
+        winningNumber = null;
         result.textContent = "等待提交数字……";
       }
 
       function renderGuesses() {
         guessList.innerHTML = "";
+
         guesses.forEach((g) => {
           const li = document.createElement("li");
-          li.innerHTML = `<span>${escapeHtml(g.name || "匿名")}</span><strong>${g.number}</strong>`;
+          const isWinner =
+            winningNumber !== null && Number(g.number) === Number(winningNumber);
+
+          li.innerHTML = `
+            <span>${isWinner ? "💥 " : ""}${escapeHtml(g.name || "匿名")}</span>
+            <strong>${g.number}</strong>
+          `;
+
+          if (isWinner) {
+            li.classList.add("danger");
+          }
+
           guessList.appendChild(li);
         });
       }
@@ -345,22 +361,68 @@
         numberBox.classList.remove("rolling");
         stopBtn.disabled = true;
 
+     
+        if (currentRound === 2) {
+          const submittedNumbers = new Set(guesses.map((g) => Number(g.number)));
+          const safeNumbers = [];
+
+          for (let i = 1; i <= 10; i++) {
+            if (!submittedNumbers.has(i)) {
+              safeNumbers.push(i);
+            }
+          }
+
+          if (safeNumbers.length === 0) {
+            winningNumber = null;
+            result.textContent = "⚠️ 发生了一些意料外的事，你已急哭👽";
+            renderGuesses();
+            return;
+          }
+
+          const randomIndex = Math.floor(Math.random() * safeNumbers.length);
+          winningNumber = safeNumbers[randomIndex];
+          currentNumber = winningNumber;
+          numberBox.textContent = currentNumber;
+
+          result.innerHTML =
+            `🛡️` +
+            `无人中弹。`;
+
+          renderGuesses();
+          return;
+        }
+
+        if (guesses.length === 0) {
+          winningNumber = null;
+          result.textContent = "⚠️ 当前还没有人提交数字，无法抽取炸弹。";
+          renderGuesses();
+          return;
+        }
+
+        // 其他轮次：从本轮已提交记录里随机抽一条，
+        // 把这条记录的数字作为炸弹数字。
+        // 如果多人提交了这个数字，会一起中弹。
+        const randomIndex = Math.floor(Math.random() * guesses.length);
+        const selectedGuess = guesses[randomIndex];
+
+        winningNumber = Number(selectedGuess.number);
+        currentNumber = winningNumber;
+        numberBox.textContent = currentNumber;
+
         const winners = guesses.filter(
-          (g) => Number(g.number) === Number(currentNumber),
+          (g) => Number(g.number) === Number(winningNumber),
         );
 
-        Array.from(guessList.children).forEach((li, index) => {
-          if (Number(guesses[index].number) === Number(currentNumber)) {
-            li.classList.add("danger");
-          }
-        });
-
         if (winners.length > 0) {
-          result.textContent =
-            "💥 中弹：" + winners.map((w) => w.name || "匿名").join("、");
+          result.innerHTML =
+            `💥 炸弹数字：${winningNumber}<br>` +
+            `中弹（${winners.length}人）：<br>` +
+            winners.map((w) => `<div>${escapeHtml(w.name || "匿名")}</div>`).join("");
         } else {
           result.textContent = "✅ 无人中弹，本轮安全。";
         }
+
+        renderGuesses();
       });
 
       newRoundBtn.addEventListener("click", async () => {
@@ -385,6 +447,7 @@
 
   currentRound = nextRound;
   roundText.textContent = currentRound;
+  winningNumber = null;
 
   guesses = [];
   renderGuesses();
