@@ -188,7 +188,7 @@
       <section class="panel qr-wrap">
         <div class="round">📱 扫码参与</div>
         <img id="qr" alt="学生扫码二维码" />
-        <!-- <div id="guessUrl" class="url"></div> -->
+        <div id="guessUrl" class="url"></div>
       </section>
 
       <section class="panel">
@@ -373,10 +373,24 @@
           }
 
           if (safeNumbers.length === 0) {
-            winningNumber = null;
-            result.textContent = "⚠️ 发生了一些意料外的事，你已急哭👽";
-            renderGuesses();
-            return;
+            const randomIndex = Math.floor(Math.random() * guesses.length);
+  const selectedGuess = guesses[randomIndex];
+
+  winningNumber = Number(selectedGuess.number);
+  currentNumber = winningNumber;
+  numberBox.textContent = currentNumber;
+
+  const winners = guesses.filter(
+    (g) => Number(g.number) === Number(winningNumber),
+  );
+
+  result.innerHTML =
+    `💥 炸弹数字：${winningNumber}<br>` +
+    `中弹（${winners.length}人）：<br>` +
+    winners.map((w) => `<div>${escapeHtml(w.name || "匿名")}</div>`).join("");
+
+  renderGuesses();
+  return;
           }
 
           const randomIndex = Math.floor(Math.random() * safeNumbers.length);
