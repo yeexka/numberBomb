@@ -380,7 +380,7 @@
   const selectedGuess = guesses[randomIndex];
 
   winningNumber = Number(selectedGuess.number);
-            await db
+  await db
   .from("game_config")
   .update({ current_bomb: winningNumber })
   .eq("id", 1);
@@ -426,6 +426,12 @@
         const selectedGuess = guesses[randomIndex];
 
         winningNumber = Number(selectedGuess.number);
+         await db
+  .from("game_config")
+  .update({ current_bomb: winningNumber })
+  .eq("id", 1);
+  currentNumber = winningNumber;
+  numberBox.textContent = currentNumber;
         currentNumber = winningNumber;
         numberBox.textContent = currentNumber;
 
