@@ -358,7 +358,7 @@
           .subscribe();
       }
 
-      stopBtn.addEventListener("click", () => {
+      stopBtn.addEventListener("click",async () => {
         clearInterval(timer);
         timer = null;
         numberBox.classList.remove("rolling");
@@ -380,6 +380,10 @@
   const selectedGuess = guesses[randomIndex];
 
   winningNumber = Number(selectedGuess.number);
+            await db
+  .from("game_config")
+  .update({ current_bomb: winningNumber })
+  .eq("id", 1);
   currentNumber = winningNumber;
   numberBox.textContent = currentNumber;
 
@@ -452,7 +456,7 @@
 
   const { error } = await db
     .from("game_config")
-    .update({ current_round: nextRound })
+    .update({ current_round: nextRound ，current_bomb: null})
     .eq("id", 1);
 
   if (error) {
