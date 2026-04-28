@@ -233,7 +233,7 @@
         clearInterval(timer);
         numberBox.classList.add("rolling");
         timer = setInterval(() => {
-          currentNumber = Math.floor(Math.random() * 100) + 1;
+          currentNumber = Math.floor(Math.random() * 50) + 1;
           numberBox.textContent = currentNumber;
         }, 70);
         stopBtn.disabled = false;
@@ -360,25 +360,34 @@
       });
 
       newRoundBtn.addEventListener("click", async () => {
-        const nextRound = currentRound + 1;
-        const { error } = await db
-          .from("game_config")
-          .update({ current_round: nextRound })
-          .eq("id", 1);
+        const confirmStart = confirm("确定开始新一轮吗？当前轮数据将不再参与对比。");
 
-        if (error) {
-          result.textContent = "新一轮创建失败，请检查权限。";
-          console.error(error);
-          return;
-        }
+  if (!confirmStart) {
+    return;
+  }
 
-        currentRound = nextRound;
-        roundText.textContent = currentRound;
-        guesses = [];
-        renderGuesses();
-        updateCount();
-        subscribeGuesses();
-        startRolling();
+  const nextRound = currentRound + 1;
+
+  const { error } = await db
+    .from("game_config")
+    .update({ current_round: nextRound })
+    .eq("id", 1);
+
+  if (error) {
+    result.textContent = "新一轮创建失败，请检查权限。";
+    console.error(error);
+    return;
+  }
+
+  currentRound = nextRound;
+  roundText.textContent = currentRound;
+
+  guesses = [];
+  renderGuesses();
+  updateCount();
+
+  subscribeGuesses();
+  startRolling();
       });
 
       loadGame();
