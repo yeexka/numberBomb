@@ -233,7 +233,7 @@
         clearInterval(timer);
         numberBox.classList.add("rolling");
         timer = setInterval(() => {
-          currentNumber = Math.floor(Math.random() * 50) + 1;
+          currentNumber = Math.floor(Math.random() * 10) + 1;
           numberBox.textContent = currentNumber;
         }, 70);
         stopBtn.disabled = false;
