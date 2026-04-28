@@ -173,6 +173,30 @@ if (name.length > 10) {
       showGuessStep();
       msg.textContent = "昵称已确认，后续轮次将使用这个昵称。";
     });
+async function checkMyResult() {
+  const currentRound = await getCurrentRound();
+  const lastSubmittedRound = localStorage.getItem("numberBombLastSubmittedRound");
+  const lastSubmittedNumber = localStorage.getItem("numberBombLastSubmittedNumber");
+
+  if (String(currentRound) !== lastSubmittedRound || !lastSubmittedNumber) {
+    return;
+  }
+
+  const { data, error } = await db
+    .from("game_config")
+    .select("current_bomb")
+    .eq("id", 1)
+    .single();
+
+  if (error || data.current_bomb === null) return;
+
+  if (Number(lastSubmittedNumber) === Number(data.current_bomb)) {
+    msg.textContent = `💥 你中弹了！炸弹数字是 ${data.current_bomb}`;
+  } else {
+    msg.textContent = `✅ 你安全了！炸弹数字是 ${data.current_bomb}`;
+  }
+}
+
 
     async function getCurrentRound() {
       const { data, error } = await db
@@ -283,6 +307,7 @@ if (name.length > 10) {
     // 学生页面可能一直开着不刷新，所以每 2 秒检查一次当前轮次。
     // 老师点“开始新一轮”后，这里会自动把按钮恢复为可提交。
     setInterval(refreshSubmitState, 2000);
+    setInterval(checkMyResult, 2000);
     refreshSubmitState();
   </script>
 </body>
