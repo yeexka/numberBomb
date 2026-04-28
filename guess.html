@@ -111,14 +111,12 @@
       <label for="number">猜一个 1-100 的数字</label>
       <input id="number" type="number" min="1" max="100" placeholder="例如：37" />
 
+      <div id="submittedNumberText" class="name-badge hidden"></div>
+
       <button id="submitBtn">提交</button>
     </section>
 
     <div id="msg" class="msg"></div>
-    <div style="margin-top: 20px;font-size: 12px;opacity: 0.6;text-align: center;line-height: 1.6;">
-  赞助商™️ Chanceux <br />
-  作者版权©️ Yee ๑
-</div>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -132,6 +130,7 @@
     const nameInput = document.getElementById("name");
     const lockNameBtn = document.getElementById("lockNameBtn");
     const lockedNameText = document.getElementById("lockedNameText");
+    const submittedNumberText = document.getElementById("submittedNumberText");
     const submitBtn = document.getElementById("submitBtn");
     const msg = document.getElementById("msg");
 
@@ -186,25 +185,37 @@ if (name.length > 10) {
       return data.current_round;
     }
 
-    function setSubmittedState(currentRound) {
+    function setSubmittedState(currentRound, submittedNumber) {
       submitBtn.disabled = true;
       submitBtn.textContent = "本轮已提交";
-      msg.textContent = `你已经提交过第 ${currentRound} 轮了，请等待下一轮。`;
+
+      if (submittedNumber) {
+        submittedNumberText.textContent = `你本轮提交的数字是：${submittedNumber}`;
+        submittedNumberText.classList.remove("hidden");
+        msg.textContent = `你已经提交过第 ${currentRound} 轮了，请等待下一轮。`;
+      } else {
+        submittedNumberText.classList.add("hidden");
+        msg.textContent = `你已经提交过第 ${currentRound} 轮了，请等待下一轮。`;
+      }
     }
 
     function setReadyState() {
       submitBtn.disabled = false;
       submitBtn.textContent = "提交";
+      submittedNumberText.textContent = "";
+      submittedNumberText.classList.add("hidden");
     }
 
     async function refreshSubmitState() {
       try {
         const currentRound = await getCurrentRound();
         const lastSubmittedRound = localStorage.getItem("numberBombLastSubmittedRound");
+        const lastSubmittedNumber = localStorage.getItem("numberBombLastSubmittedNumber");
 
         if (String(currentRound) === lastSubmittedRound) {
-          setSubmittedState(currentRound);
+          setSubmittedState(currentRound, lastSubmittedNumber);
         } else {
+          // 新一轮开始后，清掉上一轮显示的数字，并恢复提交按钮。
           setReadyState();
         }
       } catch (err) {
@@ -238,7 +249,8 @@ if (name.length > 10) {
 
         // 同一轮已经提交过，就不再允许重复提交。
         if (String(currentRound) === lastSubmittedRound) {
-          setSubmittedState(currentRound);
+          const lastSubmittedNumber = localStorage.getItem("numberBombLastSubmittedNumber");
+          setSubmittedState(currentRound, lastSubmittedNumber);
           return;
         }
 
@@ -256,8 +268,9 @@ if (name.length > 10) {
         if (!data || !data.id) throw new Error("数据库没有返回提交记录");
 
         localStorage.setItem("numberBombLastSubmittedRound", String(currentRound));
+        localStorage.setItem("numberBombLastSubmittedNumber", String(number));
         document.getElementById("number").value = "";
-        setSubmittedState(currentRound);
+        setSubmittedState(currentRound, number);
       } catch (err) {
         console.error(err);
         msg.textContent = "提交失败，请检查网络或告诉老师。";
