@@ -182,6 +182,33 @@ if (name.length > 10) {
       return data.current_round;
     }
 
+    function setSubmittedState(currentRound) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = "本轮已提交";
+      msg.textContent = `你已经提交过第 ${currentRound} 轮了，请等待下一轮。`;
+    }
+
+    function setReadyState() {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "提交";
+    }
+
+    async function refreshSubmitState() {
+      try {
+        const currentRound = await getCurrentRound();
+        const lastSubmittedRound = localStorage.getItem("numberBombLastSubmittedRound");
+
+        if (String(currentRound) === lastSubmittedRound) {
+          setSubmittedState(currentRound);
+        } else {
+          setReadyState();
+        }
+      } catch (err) {
+        console.error(err);
+        msg.textContent = "读取当前轮次失败，请刷新页面或告诉老师。";
+      }
+    }
+
     submitBtn.addEventListener("click", async () => {
       const name = lockedName;
       const number = Number(document.getElementById("number").value);
@@ -201,7 +228,15 @@ if (name.length > 10) {
       msg.textContent = "正在提交……";
 
       try {
+        // 每次提交前都重新读取当前轮次，避免学生不刷新页面导致串轮。
         const currentRound = await getCurrentRound();
+        const lastSubmittedRound = localStorage.getItem("numberBombLastSubmittedRound");
+
+        // 同一轮已经提交过，就不再允许重复提交。
+        if (String(currentRound) === lastSubmittedRound) {
+          setSubmittedState(currentRound);
+          return;
+        }
 
         const { data, error } = await db
           .from("guesses")
@@ -216,17 +251,22 @@ if (name.length > 10) {
         if (error) throw error;
         if (!data || !data.id) throw new Error("数据库没有返回提交记录");
 
-        msg.textContent = `提交成功！当前第 ${currentRound} 轮，请看大屏。`;
+        localStorage.setItem("numberBombLastSubmittedRound", String(currentRound));
         document.getElementById("number").value = "";
+        setSubmittedState(currentRound);
       } catch (err) {
         console.error(err);
         msg.textContent = "提交失败，请检查网络或告诉老师。";
-      } finally {
-        submitBtn.disabled = false;
+        setReadyState();
       }
     });
 
     initPage();
+
+    // 学生页面可能一直开着不刷新，所以每 2 秒检查一次当前轮次。
+    // 老师点“开始新一轮”后，这里会自动把按钮恢复为可提交。
+    setInterval(refreshSubmitState, 2000);
+    refreshSubmitState();
   </script>
 </body>
 </html>
