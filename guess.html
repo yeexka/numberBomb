@@ -82,6 +82,25 @@
       font-size: 17px;
       line-height: 1.5;
     }
+    .result-badge {
+      margin-top: 16px;
+      padding: 16px;
+      border-radius: 18px;
+      font-size: 20px;
+      font-weight: 900;
+      line-height: 1.5;
+      text-align: center;
+    }
+    .result-safe {
+      background: rgba(34,197,94,.18);
+      border: 1px solid rgba(34,197,94,.45);
+      color: #bbf7d0;
+    }
+    .result-bomb {
+      background: rgba(248,113,113,.20);
+      border: 1px solid rgba(248,113,113,.55);
+      color: #fecaca;
+    }
     .small-tip {
       margin-top: 8px;
       font-size: 14px;
@@ -112,11 +131,16 @@
       <input id="number" type="number" min="1" max="100" placeholder="例如：37" />
 
       <div id="submittedNumberText" class="name-badge hidden"></div>
+      <div id="myResultText" class="result-badge hidden"></div>
 
       <button id="submitBtn">提交</button>
     </section>
 
     <div id="msg" class="msg"></div>
+    <div style="margin-top: 20px; font-size: 12px; opacity: 0.6; text-align: center; line-height: 1.6;">
+      赞助商™️ Chanceux <br />
+      作者版权©️ Yee ๑
+    </div>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -131,10 +155,17 @@
     const lockNameBtn = document.getElementById("lockNameBtn");
     const lockedNameText = document.getElementById("lockedNameText");
     const submittedNumberText = document.getElementById("submittedNumberText");
+    const myResultText = document.getElementById("myResultText");
     const submitBtn = document.getElementById("submitBtn");
     const msg = document.getElementById("msg");
 
     let lockedName = localStorage.getItem("numberBombName");
+
+    function hideMyResult() {
+      myResultText.textContent = "";
+      myResultText.classList.add("hidden");
+      myResultText.classList.remove("result-safe", "result-bomb");
+    }
 
     function showNameStep() {
       nameSection.classList.remove("hidden");
@@ -204,6 +235,7 @@ if (name.length > 10) {
       submitBtn.textContent = "提交";
       submittedNumberText.textContent = "";
       submittedNumberText.classList.add("hidden");
+      hideMyResult();
     }
 
     async function refreshSubmitState() {
@@ -221,6 +253,51 @@ if (name.length > 10) {
       } catch (err) {
         console.error(err);
         msg.textContent = "读取当前轮次失败，请刷新页面或告诉老师。";
+      }
+    }
+
+    async function getCurrentBomb() {
+      const { data, error } = await db
+        .from("game_config")
+        .select("current_bomb")
+        .eq("id", 1)
+        .single();
+
+      if (error) throw error;
+      return data.current_bomb;
+    }
+
+    async function checkMyResult() {
+      try {
+        const currentRound = await getCurrentRound();
+        const lastSubmittedRound = localStorage.getItem("numberBombLastSubmittedRound");
+        const lastSubmittedNumber = localStorage.getItem("numberBombLastSubmittedNumber");
+
+        // 只检查当前轮，并且必须本轮已经提交过数字。
+        if (String(currentRound) !== lastSubmittedRound || !lastSubmittedNumber) {
+          hideMyResult();
+          return;
+        }
+
+        const currentBomb = await getCurrentBomb();
+
+        // 大屏还没有点击停止时，不显示结果。
+        if (currentBomb === null || currentBomb === undefined) {
+          hideMyResult();
+          return;
+        }
+
+        myResultText.classList.remove("hidden", "result-safe", "result-bomb");
+
+        if (Number(lastSubmittedNumber) === Number(currentBomb)) {
+          myResultText.classList.add("result-bomb");
+          myResultText.textContent = `💥 你中弹了！炸弹数字是 ${currentBomb}`;
+        } else {
+          myResultText.classList.add("result-safe");
+          myResultText.textContent = `✅ 你安全了！炸弹数字是 ${currentBomb}`;
+        }
+      } catch (err) {
+        console.error("检查结果失败：", err);
       }
     }
 
@@ -270,6 +347,7 @@ if (name.length > 10) {
         localStorage.setItem("numberBombLastSubmittedRound", String(currentRound));
         localStorage.setItem("numberBombLastSubmittedNumber", String(number));
         document.getElementById("number").value = "";
+        hideMyResult();
         setSubmittedState(currentRound, number);
       } catch (err) {
         console.error(err);
@@ -283,7 +361,9 @@ if (name.length > 10) {
     // 学生页面可能一直开着不刷新，所以每 2 秒检查一次当前轮次。
     // 老师点“开始新一轮”后，这里会自动把按钮恢复为可提交。
     setInterval(refreshSubmitState, 2000);
+    setInterval(checkMyResult, 2000);
     refreshSubmitState();
+    checkMyResult();
   </script>
 </body>
 </html>
