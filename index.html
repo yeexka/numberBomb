@@ -125,6 +125,7 @@
         padding: 10px;
       }
       .url {
+        display: none;
         margin-top: 12px;
         font-size: 14px;
         word-break: break-all;
@@ -300,7 +301,7 @@
 
         const { error: resetError } = await db
           .from("game_config")
-          .update({ current_round: 1 })
+          .update({ current_round: 1, current_bomb: null })
           .eq("id", 1);
 
         if (resetError) {
@@ -358,7 +359,20 @@
           .subscribe();
       }
 
-      stopBtn.addEventListener("click",async () => {
+      async function saveBomb(number) {
+        const { error } = await db
+          .from("game_config")
+          .update({ current_bomb: number })
+          .eq("id", 1);
+
+        if (error) {
+          console.error("保存炸弹数字失败：", error);
+          result.textContent = "保存炸弹数字失败，请检查 Supabase 权限。";
+          throw error;
+        }
+      }
+
+      stopBtn.addEventListener("click", async () => {
         clearInterval(timer);
         timer = null;
         numberBox.classList.remove("rolling");
@@ -380,10 +394,7 @@
   const selectedGuess = guesses[randomIndex];
 
   winningNumber = Number(selectedGuess.number);
-  await db
-  .from("game_config")
-  .update({ current_bomb: winningNumber })
-  .eq("id", 1);
+  await saveBomb(winningNumber);
   currentNumber = winningNumber;
   numberBox.textContent = currentNumber;
 
@@ -402,6 +413,7 @@
 
           const randomIndex = Math.floor(Math.random() * safeNumbers.length);
           winningNumber = safeNumbers[randomIndex];
+          await saveBomb(winningNumber);
           currentNumber = winningNumber;
           numberBox.textContent = currentNumber;
 
@@ -426,12 +438,7 @@
         const selectedGuess = guesses[randomIndex];
 
         winningNumber = Number(selectedGuess.number);
-         await db
-  .from("game_config")
-  .update({ current_bomb: winningNumber })
-  .eq("id", 1);
-  currentNumber = winningNumber;
-  numberBox.textContent = currentNumber;
+        await saveBomb(winningNumber);
         currentNumber = winningNumber;
         numberBox.textContent = currentNumber;
 
@@ -462,7 +469,7 @@
 
   const { error } = await db
     .from("game_config")
-    .update({ current_round: nextRound ，current_bomb: null})
+    .update({ current_round: nextRound, current_bomb: null })
     .eq("id", 1);
 
   if (error) {
